@@ -648,16 +648,6 @@ footer{background:var(--green);border-radius:32px 32px 0 0;margin-top:48px;paddi
       <div class="about-card"><div class="icon">💡</div><h3>Our Solution</h3><p>A web-based platform that filters menus in real time based on your personal Safety Profile. No app. No scanning. Just safe food.</p></div>
       <div class="about-card"><div class="icon">🌍</div><h3>Our Vision</h3><p>A Philippines where anyone, regardless of their allergy or dietary condition, can sit down at any restaurant and order food with total confidence.</p></div>
     </div>
-    <div class="sec-title" style="margin-bottom:20px;">How D.I.N.E. Compares</div>
-    <div class="compare-table">
-      <div class="compare-head"><div>Feature</div><div>D.I.N.E.</div><div>Fig</div><div>Spokin</div><div>DineSafe</div></div>
-      <div class="compare-row"><div class="compare-feature">Restaurant menu filtering</div><div class="compare-cell">✅</div><div class="compare-cell">❌</div><div class="compare-cell">❌</div><div class="compare-cell">✅</div></div>
-      <div class="compare-row"><div class="compare-feature">No app download needed</div><div class="compare-cell">✅</div><div class="compare-cell">❌</div><div class="compare-cell">❌</div><div class="compare-cell">❌</div></div>
-      <div class="compare-row"><div class="compare-feature">Browse from anywhere</div><div class="compare-cell">✅</div><div class="compare-cell">❌</div><div class="compare-cell">⚠️</div><div class="compare-cell">❌</div></div>
-      <div class="compare-row"><div class="compare-feature">No QR scanning required</div><div class="compare-cell">✅</div><div class="compare-cell">❌</div><div class="compare-cell">✅</div><div class="compare-cell">❌</div></div>
-      <div class="compare-row"><div class="compare-feature">Philippines coverage</div><div class="compare-cell">✅</div><div class="compare-cell">❌</div><div class="compare-cell">⚠️</div><div class="compare-cell">❌</div></div>
-      <div class="compare-row"><div class="compare-feature">Free to use</div><div class="compare-cell">✅</div><div class="compare-cell">⚠️</div><div class="compare-cell">✅</div><div class="compare-cell">✅</div></div>
-    </div>
   </div>
   <footer>
     <div class="footer-grid">
@@ -731,11 +721,61 @@ function getChecked(gridId) {
   return [...document.querySelectorAll(`#${gridId} .selected input`)].map(i => i.value);
 }
 function toggleCheck(el) { el.classList.toggle('selected'); }
+
+function addCustomAllergen() {
+  const input = document.getElementById('custom-allergen-input');
+  const val   = input.value.trim();
+  if (!val) return;
+  const grid  = document.getElementById('allergen-checks');
+  // Prevent duplicates
+  const exists = [...grid.querySelectorAll('input')].some(i => i.value.toLowerCase() === val.toLowerCase());
+  if (exists) { showToast('⚠️ Allergen already exists.'); return; }
+  const chip = document.createElement('div');
+  chip.className = 'allergen-check selected';
+  chip.onclick = function() { toggleCheck(this); };
+  chip.innerHTML = `<input type="checkbox" value="${val}" checked/>⚠️ ${val}`;
+  // Add remove button
+  const rm = document.createElement('span');
+  rm.textContent = ' ×';
+  rm.style.cssText = 'cursor:pointer;margin-left:2px;opacity:0.7;font-weight:900;';
+  rm.onclick = function(e) { e.stopPropagation(); chip.remove(); };
+  chip.appendChild(rm);
+  grid.appendChild(chip);
+  input.value = '';
+  showToast(`✅ "${val}" added as allergen.`);
+}
+
+function addCustomDiet() {
+  const input = document.getElementById('custom-diet-input');
+  const val   = input.value.trim();
+  if (!val) return;
+  const grid  = document.getElementById('diet-checks');
+  const exists = [...grid.querySelectorAll('input')].some(i => i.value.toLowerCase() === val.toLowerCase());
+  if (exists) { showToast('⚠️ Dietary label already exists.'); return; }
+  const chip = document.createElement('div');
+  chip.className = 'diet-check selected';
+  chip.onclick = function() { toggleCheck(this); };
+  chip.innerHTML = `<input type="checkbox" value="${val}" checked/>✅ ${val}`;
+  const rm = document.createElement('span');
+  rm.textContent = ' ×';
+  rm.style.cssText = 'cursor:pointer;margin-left:2px;opacity:0.7;font-weight:900;';
+  rm.onclick = function(e) { e.stopPropagation(); chip.remove(); };
+  chip.appendChild(rm);
+  grid.appendChild(chip);
+  input.value = '';
+  showToast(`✅ "${val}" added as dietary label.`);
+}
+
 function clearItemForm() {
   ['f-item-name','f-item-desc','f-item-ingredients','f-item-price'].forEach(id => {
     const e = document.getElementById(id); if (e) e.value = '';
   });
   document.querySelectorAll('.allergen-check.selected,.diet-check.selected').forEach(e => e.classList.remove('selected'));
+  // Remove custom-added chips (they have a × button inside)
+  document.querySelectorAll('#allergen-checks .allergen-check span, #diet-checks .diet-check span').forEach(rm => rm.parentElement.remove());
+  // Clear custom input fields
+  const ca = document.getElementById('custom-allergen-input'); if (ca) ca.value = '';
+  const cd = document.getElementById('custom-diet-input');     if (cd) cd.value = '';
 }
 
 // ═══════════════════════════════════════════════════════
@@ -810,6 +850,13 @@ async function adminLogout() {
 // Enter key on password
 document.getElementById('admin-password').addEventListener('keydown', e => {
   if (e.key === 'Enter') adminLogin();
+});
+
+// Enter key for custom tag inputs (delegated — fields are created dynamically)
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (e.target.id === 'custom-allergen-input') addCustomAllergen();
+  if (e.target.id === 'custom-diet-input')     addCustomDiet();
 });
 
 // ═══════════════════════════════════════════════════════
@@ -1024,6 +1071,10 @@ function renderManagePage() {
                 <div class="allergen-check" onclick="toggleCheck(this)"><input type="checkbox" value="Soy"/>🫘 Soy</div>
                 <div class="allergen-check" onclick="toggleCheck(this)"><input type="checkbox" value="Sesame"/>🫙 Sesame</div>
               </div>
+              <div class="custom-tag-row" style="display:flex;gap:8px;margin-top:8px;">
+                <input id="custom-allergen-input" class="custom-tag-input" placeholder="Add custom allergen…" style="flex:1;padding:7px 12px;border:1.5px solid #dde8e2;border-radius:50px;font-family:'Nunito',sans-serif;font-size:0.8rem;outline:none;" />
+                <button onclick="addCustomAllergen()" style="background:var(--accent2);color:white;border:none;border-radius:50px;padding:7px 14px;font-family:'Nunito',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;white-space:nowrap;">+ Add</button>
+              </div>
               <div class="form-section-divider"></div>
               <div class="form-section-label">✅ Dietary Labels</div>
               <div class="diet-check-grid" id="diet-checks">
@@ -1035,7 +1086,11 @@ function renderManagePage() {
                 <div class="diet-check" onclick="toggleCheck(this)"><input type="checkbox" value="Dairy-Free"/>🥛 DF</div>
                 <div class="diet-check" onclick="toggleCheck(this)"><input type="checkbox" value="Low Sodium"/>🧂 Low Sodium</div>
               </div>
-              <button class="add-item-btn" onclick="addMenuItem()">+ Add Menu Item</button>
+              <div class="custom-tag-row" style="display:flex;gap:8px;margin-top:8px;">
+                <input id="custom-diet-input" class="custom-tag-input" placeholder="Add custom dietary label…" style="flex:1;padding:7px 12px;border:1.5px solid #dde8e2;border-radius:50px;font-family:'Nunito',sans-serif;font-size:0.8rem;outline:none;" />
+                <button onclick="addCustomDiet()" style="background:var(--green);color:white;border:none;border-radius:50px;padding:7px 14px;font-family:'Nunito',sans-serif;font-size:0.78rem;font-weight:800;cursor:pointer;white-space:nowrap;">+ Add</button>
+              </div>
+              <button class="add-item-btn" onclick="addMenuItem()" style="margin-top:14px;">+ Add Menu Item</button>
             </div>
           </div>
           <div class="manage-restaurants-panel" id="manage-rest-list">
